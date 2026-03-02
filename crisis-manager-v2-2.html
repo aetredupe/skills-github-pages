@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crisis Management Simulator - Wag the Dog</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            overflow: hidden;
+        }
+        
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+        
+        .crisis-box {
+            background: #fff5f5;
+            border-left: 4px solid #e53e3e;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+        }
+        
+        .crisis-box h2 {
+            color: #c53030;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        
+        .crisis-box p {
+            color: #2d3748;
+            line-height: 1.6;
+        }
+        
+        .points-tracker {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .points-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 10px 0;
+        }
+        
+        .points-display.low {
+            color: #e53e3e;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .phase-container {
+            position: relative;
+            min-height: 600px;
+        }
+        
+        .phase {
+            position: absolute;
+            width: 100%;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        
+        .phase.active {
+            transform: translateX(0);
+            opacity: 1;
+            position: relative;
+        }
+        
+        .phase.exiting {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        .phase h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 22px;
+            border-bottom: 2px solid #4299e1;
+            padding-bottom: 10px;
+        }
+        
+        .option {
+            background: white;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .option:hover:not(.selected):not(.disabled) {
+            border-color: #4299e1;
+            transform: translateX(5px);
+        }
+        
+        .option.selected {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+        
+        .option.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        .option-text {
+            flex: 1;
+            color: #2d3748;
+            font-weight: 500;
+        }
+        
+        .option-cost {
+            background: #4299e1;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 15px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .option.selected .option-cost {
+            background: #48bb78;
+        }
+        
+        button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #3182ce;
+            transform: scale(1.05);
+        }
+        
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+        
+        .justification {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .justification:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+        
+        .event-reveal {
+            background: #fffaf0;
+            border: 3px solid #ed8936;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .event-reveal h3 {
+            color: #c05621;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        
+        .dice-animation {
+            font-size: 72px;
+            margin: 20px 0;
+            animation: spin 0.5s ease-in-out;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .event-description {
+            color: #2d3748;
+            font-size: 18px;
+            line-height: 1.6;
+            font-weight: 500;
+            margin-top: 15px;
+        }
+        
+        .cost-adjustment {
+            background: #fef5e7;
+            border: 2px solid #f39c12;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #d68910;
+        }
+        
+        .phase-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .summary {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        .summary h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .summary-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .summary-item strong {
+            color: #2d3748;
+        }
+        
+        .final-score {
+            background: #e6fffa;
+            border: 3px solid #38b2ac;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .final-score h2 {
+            color: #234e52;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .score-number {
+            font-size: 64px;
+            font-weight: bold;
+            color: #38b2ac;
+        }
+        
+        .reset-button {
+            background: #e53e3e;
+            margin-top: 20px;
+            margin-right: 10px;
+        }
+        
+        .reset-button:hover {
+            background: #c53030;
+        }
+        
+        .export-button {
+            background: #38b2ac;
+            margin-top: 20px;
+        }
+        
+        .export-button:hover {
+            background: #319795;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+                padding: 20px;
+            }
+            button {
+                display: none !important;
+            }
+            .phase-container {
+                display: none;
+            }
+            .crisis-box, .points-tracker {
+                page-break-inside: avoid;
+            }
+            .summary-item {
+                page-break-inside: avoid;
+                margin-bottom: 15px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            .subtitle {
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Crisis Management Simulator</h1>
+        <p class="subtitle">"If you don't read the newspaper, you're uninformed. If you do, you're misinformed." - Mark Twain</p>
+        
+        <div class="crisis-box">
+            <h2>THE CRISIS</h2>
+            <p>Photos have surfaced of the President with their lover at a private resort. The evidence is clear and timestamped during a period when the President claimed to be at Camp David "working." The story breaks in 2 hours.</p>
+            <p style="margin-top: 10px;"><strong>YOUR ROLE:</strong> You are the Communications Director. Manage this crisis strategically.</p>
+        </div>
+        
+        <div class="points-tracker">
+            <div style="color: #718096; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Points Remaining</div>
+            <div class="points-display" id="pointsDisplay">25</div>
+            <div style="color: #718096; font-size: 14px;">Budget wisely. Anything can happen.</div>
+        </div>
+        
+        <div class="phase-container">
+            <!-- PHASE 1: DENY -->
+            <div class="phase active" id="phase1" data-phase="1">
+                <h3>Phase 1: DENY</h3>
+                <p style="margin-bottom: 15px; color: #718096;">Initial response - choose your approach</p>
+                
+                <div class="option" data-cost="2" data-id="deny1">
+                    <span class="option-text">Ignore press completely</span>
+                    <span class="option-cost">2 pts</span>
+                </div>
+                
+                <div class="option" data-cost="3" data-id="deny2">
+                    <span class="option-text">"Doctored photos" claim via social media</span>
+                    <span class="option-cost">3 pts</span>
+                </div>
+                
+                <div class="option" data-cost="4" data-id="deny3">
+                    <span class="option-text">Categorical denial via press secretary</span>
+                    <span class="option-cost">4 pts</span>
+                </div>
+                
+                <div class="option" data-cost="6" data-id="deny4">
+                    <span class="option-text">President addresses nation directly to deny</span>
+                    <span class="option-cost">6 pts</span>
+                </div>
+                
+                <textarea class="justification" id="justify-phase1" placeholder="Justify your DENY strategy (2-3 lines): Why this approach?"></textarea>
+                
+                <div class="phase-buttons">
+                    <button onclick="lockInPhase(1)">Lock In Choices</button>
+                </div>
+            </div>
+            
+            <!-- PHASE 2: DIFFUSE -->
+            <div class="phase" id="phase2" data-phase="2">
+                <h3>Phase 2: DIFFUSE</h3>
+                <p style="margin-bottom: 15px; color: #718096;">Minimize the damage</p>
+                
+                <div class="option" data-cost="2" data-id="diffuse1">
+                    <span class="option-text">"This is a private matter" statement</span>
+                    <span class="option-cost">2 pts</span>
+                </div>
+                
+                <div class="option" data-cost="3" data-id="diffuse2">
+                    <span class="option-text">Deploy surrogates on Sunday talk shows</span>
+                    <span class="option-cost">3 pts</span>
+                </div>
+                
+                <div class="option" data-cost="5" data-id="diffuse3">
+                    <span class="option-text">Full apology with context and corrective steps</span>
+                    <span class="option-cost">5 pts</span>
+                </div>
+                
+                <div class="option" data-cost="4" data-id="diffuse4">
+                    <span class="option-text">Attack credibility of sources and media</span>
+                    <span class="option-cost">4 pts</span>
+                </div>
+                
+                <textarea class="justification" id="justify-phase2" placeholder="Justify your DIFFUSE strategy (2-3 lines): Why this approach?"></textarea>
+                
+                <div class="phase-buttons">
+                    <button onclick="lockInPhase(2)">Lock In Choices</button>
+                </div>
+            </div>
+            
+            <!-- PHASE 3: DEFLECT -->
+            <div class="phase" id="phase3" data-phase="3">
+                <h3>Phase 3: DEFLECT</h3>
+                <p style="margin-bottom: 15px; color: #718096;">Change the narrative</p>
+                
+                <div class="option" data-cost="2" data-id="deflect1">
+                    <span class="option-text">Point to opponent's ethical issues</span>
+                    <span class="option-cost">2 pts</span>
+                </div>
+                
+                <div class="option" data-cost="5" data-id="deflect2">
+                    <span class="option-text">Announce major domestic policy victory</span>
+                    <span class="option-cost">5 pts</span>
+                </div>
+                
+                <div class="option" data-cost="8" data-id="deflect3">
+                    <span class="option-text">Escalate existing international tension</span>
+                    <span class="option-cost">8 pts</span>
+                </div>
+                
+                <div class="option" data-cost="6" data-id="deflect4">
+                    <span class="option-text">Fire senior staff member as scapegoat</span>
+                    <span class="option-cost">6 pts</span>
+                </div>
+                
+                <textarea class="justification" id="justify-phase3" placeholder="Justify your DEFLECT strategy (2-3 lines): Why this approach?"></textarea>
+                
+                <div class="phase-buttons">
+                    <button onclick="lockInPhase(3)">Lock In Choices</button>
+                </div>
+            </div>
+            
+            <!-- PHASE 4: MANUFACTURE -->
+            <div class="phase" id="phase4" data-phase="4">
+                <h3>Phase 4: MANUFACTURE</h3>
+                <p style="margin-bottom: 15px; color: #718096;">Create a new reality - the nuclear option</p>
+                
+                <div class="option" data-cost="7" data-id="manufacture1">
+                    <span class="option-text">Stage major humanitarian rescue operation</span>
+                    <span class="option-cost">7 pts</span>
+                </div>
+                
+                <div class="option" data-cost="10" data-id="manufacture2">
+                    <span class="option-text">Create national security "threat" requiring attention</span>
+                    <span class="option-cost">10 pts</span>
+                </div>
+                
+                <div class="option" data-cost="15" data-id="manufacture3">
+                    <span class="option-text">🎬 Manufacture military conflict & war hero (Full "Wag the Dog")</span>
+                    <span class="option-cost">15 pts</span>
+                </div>
+                
+                <div class="option" data-cost="8" data-id="manufacture4">
+                    <span class="option-text">Orchestrate "resignation for health reasons"</span>
+                    <span class="option-cost">8 pts</span>
+                </div>
+                
+                <textarea class="justification" id="justify-phase4" placeholder="Justify your MANUFACTURE strategy (2-3 lines): Why this approach?"></textarea>
+                
+                <div class="phase-buttons">
+                    <button onclick="lockInPhase(4)">Complete Strategy</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SUMMARY -->
+        <div class="summary" id="summary" style="display: none;">
+            <h3>📊 Crisis Management Strategy - Final Report</h3>
+            <div id="summaryContent"></div>
+            <div class="phase-buttons">
+                <button class="reset-button" onclick="resetSimulation()">Reset & Try Again</button>
+                <button class="export-button" onclick="exportToPDF()">📄 Export to PDF</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let points = 25;
+        let currentPhase = 1;
+        let selectedChoices = [];
+        let rolls = [];
+        let baseCosts = {
+            phase2: [2, 3, 5, 4],
+            phase3: [2, 5, 8, 6],
+            phase4: [7, 10, 15, 8]
+        };
+        
+        const diceConfig = {
+            1: { sides: 6, low: [1, 2], mid: [3, 4], high: [5, 6] },
+            2: { sides: 6, low: [1, 2], mid: [3, 4], high: [5, 6] },
+            3: { sides: 12, low: [1, 2, 3], mid: [4, 5, 6, 7, 8, 9], high: [10, 11, 12] },
+            4: { sides: 20, low: [1, 2, 3, 4, 5], mid: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15], high: [16, 17, 18, 19, 20] }
+        };
+        
+        const eventDescriptions = {
+            1: {
+                low: "Your initial strategy is holding. Media hasn't found additional evidence yet.",
+                mid: "More photos surface from a second location. Timeline extends to 8 months.",
+                high: "Video footage emerges. Audio includes discussion of policy favors."
+            },
+            2: {
+                low: "Public attention briefly shifts to other news. Breathing room achieved.",
+                mid: "Lover's attorney announces press conference tomorrow. Hints at recordings.",
+                high: "Text messages leak showing use of official resources. Ethics probe begins."
+            },
+            3: {
+                low: "Opposition makes tactical errors. Your deflection gains traction.",
+                mid: "News cycle continues. Moderate pressure from both media and congress.",
+                high: "Intelligence agencies confirm lover has foreign government ties. National security crisis."
+            },
+            4: {
+                low: "Your manufactured crisis dominates headlines. Scandal relegated to page 5.",
+                mid: "Manufactured event gains traction but investigative reporters remain skeptical.",
+                high: "Whistleblower exposes the manufactured crisis as staged. Double scandal now."
+            }
+        };
+        
+        // Initialize option handlers
+        function initializePhaseOptions() {
+            document.querySelectorAll('.option').forEach(option => {
+                option.addEventListener('click', function() {
+                    if (this.classList.contains('disabled')) return;
+                    
+                    const cost = parseInt(this.dataset.cost);
+                    const id = this.dataset.id;
+                    const phase = this.closest('.phase').dataset.phase;
+                    
+                    // If clicking an already selected option, deselect it
+                    if (this.classList.contains('selected')) {
+                        this.classList.remove('selected');
+                        points += cost;
+                        selectedChoices = selectedChoices.filter(c => c.id !== id);
+                    } else {
+                        // Deselect any other options in this phase first (only one choice allowed)
+                        const phaseEl = this.closest('.phase');
+                        phaseEl.querySelectorAll('.option.selected').forEach(selectedOpt => {
+                            const selectedCost = parseInt(selectedOpt.dataset.cost);
+                            const selectedId = selectedOpt.dataset.id;
+                            selectedOpt.classList.remove('selected');
+                            points += selectedCost;
+                            selectedChoices = selectedChoices.filter(c => c.id !== selectedId);
+                        });
+                        
+                        // Select this option
+                        if (points >= cost) {
+                            this.classList.add('selected');
+                            points -= cost;
+                            selectedChoices.push({
+                                id: id,
+                                text: this.querySelector('.option-text').textContent,
+                                cost: cost,
+                                phase: parseInt(phase)
+                            });
+                        }
+                    }
+                    
+                    updatePointsDisplay();
+                    updateOptionsAvailability();
+                });
+            });
+        }
+        
+        initializePhaseOptions();
+        
+        function updatePointsDisplay() {
+            const display = document.getElementById('pointsDisplay');
+            display.textContent = points;
+            display.classList.toggle('low', points <= 8);
+        }
+        
+        function updateOptionsAvailability() {
+            const currentPhaseEl = document.querySelector('.phase.active');
+            if (!currentPhaseEl) return;
+            
+            currentPhaseEl.querySelectorAll('.option:not(.selected)').forEach(option => {
+                const cost = parseInt(option.dataset.cost);
+                option.classList.toggle('disabled', cost > points);
+            });
+        }
+        
+        function lockInPhase(phase) {
+            // Check if a choice has been made for this phase
+            const phaseChoices = selectedChoices.filter(c => c.phase === phase);
+            if (phaseChoices.length === 0) {
+                alert('Please select a strategy option before locking in your choice.');
+                return;
+            }
+            
+            const config = diceConfig[phase];
+            const roll = Math.floor(Math.random() * config.sides) + 1;
+            
+            let outcome;
+            if (config.low.includes(roll)) outcome = 'low';
+            else if (config.high.includes(roll)) outcome = 'high';
+            else outcome = 'mid';
+            
+            rolls.push({ phase, roll, outcome, sides: config.sides });
+            
+            // Show event reveal
+            showEventReveal(phase, roll, outcome, config.sides);
+        }
+        
+        function showEventReveal(phase, roll, outcome, sides) {
+            const currentPhaseEl = document.getElementById(`phase${phase}`);
+            const eventHTML = `
+                <div class="event-reveal">
+                    <h3>⚠️ CRISIS EVOLUTION ⚠️</h3>
+                    <div class="dice-animation">🎲 D${sides}: ${roll}</div>
+                    <div class="event-description">${eventDescriptions[phase][outcome]}</div>
+                    ${phase < 4 ? getCostAdjustmentHTML(outcome) : ''}
+                    <div class="phase-buttons" style="margin-top: 25px;">
+                        <button onclick="${phase < 4 ? `continueToNextPhase(${phase}, '${outcome}')` : 'showFinalSummary()'}">${phase < 4 ? 'Continue to Next Phase →' : 'View Final Results →'}</button>
+                    </div>
+                </div>
+            `;
+            
+            currentPhaseEl.insertAdjacentHTML('beforeend', eventHTML);
+            currentPhaseEl.querySelector('.phase-buttons').style.display = 'none';
+        }
+        
+        function getCostAdjustmentHTML(outcome) {
+            const adjustments = {
+                low: '✓ Strategy effective! Next phase costs DECREASED by 1',
+                mid: '⚠ Moderate escalation. Next phase costs INCREASED by 1',
+                high: '🚨 Major crisis! Next phase costs INCREASED by 2'
+            };
+            return `<div class="cost-adjustment">${adjustments[outcome]}</div>`;
+        }
+        
+        function continueToNextPhase(currentPhaseNum, outcome) {
+            adjustNextPhaseCosts(currentPhaseNum + 1, outcome);
+            transitionToNextPhase(currentPhaseNum);
+        }
+        
+        function adjustNextPhaseCosts(nextPhase, outcome) {
+            const adjustment = outcome === 'low' ? -1 : outcome === 'mid' ? 1 : 2;
+            const phaseKey = `phase${nextPhase}`;
+            const nextPhaseEl = document.getElementById(phaseKey);
+            
+            nextPhaseEl.querySelectorAll('.option').forEach((option, index) => {
+                const newCost = Math.max(1, baseCosts[phaseKey][index] + adjustment);
+                option.dataset.cost = newCost;
+                option.querySelector('.option-cost').textContent = `${newCost} pts`;
+            });
+        }
+        
+        function transitionToNextPhase(currentPhaseNum) {
+            const currentEl = document.getElementById(`phase${currentPhaseNum}`);
+            const nextEl = document.getElementById(`phase${currentPhaseNum + 1}`);
+            
+            currentEl.classList.remove('active');
+            currentEl.classList.add('exiting');
+            
+            setTimeout(() => {
+                nextEl.classList.add('active');
+                updateOptionsAvailability();
+            }, 500);
+        }
+        
+        function showFinalSummary() {
+            const phaseEl = document.getElementById('phase4');
+            phaseEl.classList.remove('active');
+            phaseEl.classList.add('exiting');
+            
+            setTimeout(() => {
+                buildSummary();
+                document.getElementById('summary').style.display = 'block';
+                document.getElementById('summary').scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+        }
+        
+        function buildSummary() {
+            const phaseChoices = [1, 2, 3, 4].map(p => ({
+                phase: p,
+                choices: selectedChoices.filter(c => c.phase === p),
+                justification: document.getElementById(`justify-phase${p}`).value,
+                roll: rolls.find(r => r.phase === p)
+            }));
+            
+            let html = `
+                <div class="final-score">
+                    <h2>Final Score</h2>
+                    <div class="score-number">${points}</div>
+                    <div style="color: #234e52; margin-top: 10px;">Points Remaining</div>
+                    <div style="color: #718096; margin-top: 10px; font-size: 14px;">
+                        ${points > 15 ? 'Excellent crisis management!' : points > 8 ? 'Effective strategy with calculated risks' : points > 0 ? 'Survived but with minimal margin' : 'Crisis overwhelmed your resources'}
+                    </div>
+                </div>
+            `;
+            
+            phaseChoices.forEach(({ phase, choices, justification, roll }) => {
+                const phaseNames = ['', 'DENY', 'DIFFUSE', 'DEFLECT', 'MANUFACTURE'];
+                html += `
+                    <div class="summary-item">
+                        <strong>Phase ${phase}: ${phaseNames[phase]}</strong><br>
+                        ${choices.map(c => `• ${c.text} (${c.cost} pts)`).join('<br>')}
+                        ${justification ? `<br><br><em>Justification: ${justification}</em>` : ''}
+                        ${roll ? `<br><br><strong>Event Roll:</strong> D${roll.sides} = ${roll.roll} (${roll.outcome.toUpperCase()})` : ''}
+                        ${roll ? `<br>${eventDescriptions[phase][roll.outcome]}` : ''}
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="summary-item">
+                    <strong>Total Points Spent:</strong> ${25 - points} / 25<br>
+                    <strong>Efficiency Rating:</strong> ${Math.round((points / 25) * 100)}%
+                </div>
+            `;
+            
+            document.getElementById('summaryContent').innerHTML = html;
+        }
+        
+        function exportToPDF() {
+            // Add print-ready class for styling
+            document.body.classList.add('printing');
+            
+            try {
+                // Trigger browser print dialog
+                window.print();
+            } catch (e) {
+                alert('Print dialog blocked. Please use your browser\'s print function (Ctrl+P / Cmd+P) to export to PDF.');
+            }
+            
+            // Remove print class after a delay
+            setTimeout(() => {
+                document.body.classList.remove('printing');
+            }, 1000);
+        }
+        
+        function resetSimulation() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
